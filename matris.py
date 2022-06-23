@@ -38,7 +38,7 @@ VISIBLE_MATRIX_HEIGHT = MATRIX_HEIGHT - 2
 
 
 class Matris(object):
-    def __init__(self):
+    def __init__(self, screen):
         self.surface = screen.subsurface(Rect((MATRIS_OFFSET+BORDERWIDTH, MATRIS_OFFSET+BORDERWIDTH),
                                               (MATRIX_WIDTH * BLOCKSIZE, (MATRIX_HEIGHT-2) * BLOCKSIZE)))
 
@@ -57,7 +57,7 @@ class Matris(object):
         self.set_tetrominoes()
         self.tetromino_rotation = 0
         self.downwards_timer = 0
-        self.base_downwards_speed = 0.4 # Move down every 400 ms
+        self.base_downwards_speed = 0.04 # Move down every 400 ms
 
         self.movement_keys = {'left': 0, 'right': 0}
         self.movement_keys_speed = 0.05
@@ -66,6 +66,7 @@ class Matris(object):
         self.level = 1
         self.score = 0
         self.lines = 0
+        self.isAlive = True
 
         self.combo = 1 # Combo will increase when you clear lines with several tetrominos in a row
         
@@ -78,7 +79,25 @@ class Matris(object):
         self.gameover_sound = get_sound("gameover.wav")
         self.linescleared_sound = get_sound("linecleared.wav")
         self.highscorebeaten_sound = get_sound("highscorebeaten.wav")
+        
 
+    def receive_gamestate(self):
+        """
+        Receives gamestate
+        """
+        gamestate = {}
+        gamestate['matrix'] = self.matrix
+        gamestate['level']  = self.level
+        gamestate['score'] = self.score
+        gamestate['lines'] = self.lines
+        gamestate['combo'] = self.combo
+        gamestate['isAlive'] = self.isAlive
+
+        return gamestate
+
+    # Restart Matris
+    def restart(self, screen):
+        self.__init__(screen)
 
     def set_tetrominoes(self):
         """
@@ -423,6 +442,9 @@ class Matris(object):
         return surf
 
 class Game(object):
+
+    screen = None
+
     def main(self, screen):
         """
         Main loop for game
@@ -430,7 +452,8 @@ class Game(object):
         """
         clock = pygame.time.Clock()
 
-        self.matris = Matris()
+        self.screen = screen
+        self.matris = Matris(screen)
         
         screen.blit(construct_nightmare(screen.get_size()), (0,0))
         
@@ -448,6 +471,10 @@ class Game(object):
             except GameOver:
                 return
       
+    # restart game
+    def restart(self):
+        self.matris.restart(self.screen)
+        self.redraw()
 
     def redraw(self):
         """
@@ -502,7 +529,7 @@ class Game(object):
         area.blit(linessurf, (0, levelsurf.get_rect().height + scoresurf.get_rect().height))
         area.blit(combosurf, (0, levelsurf.get_rect().height + scoresurf.get_rect().height + linessurf.get_rect().height))
 
-        screen.blit(area, area.get_rect(bottom=HEIGHT-MATRIS_OFFSET, centerx=TRICKY_CENTERX))
+        self.screen.blit(area, area.get_rect(bottom=HEIGHT-MATRIS_OFFSET, centerx=TRICKY_CENTERX))
 
 
     def blit_next_tetromino(self, tetromino_surf):
@@ -520,56 +547,57 @@ class Game(object):
         center = areasize/2 - tetromino_surf_size/2
         area.blit(tetromino_surf, (center, center))
 
-        screen.blit(area, area.get_rect(top=MATRIS_OFFSET, centerx=TRICKY_CENTERX))
+        self.screen.blit(area, area.get_rect(top=MATRIS_OFFSET, centerx=TRICKY_CENTERX))
 
-class Menu(object):
-    """
-    Creates main menu
-    """
-    running = True
-    def main(self, screen):
-        clock = pygame.time.Clock()
-        menu = kezmenu.KezMenu(
-            ['Play!', lambda: Game().main(screen)],
-            ['Quit', lambda: setattr(self, 'running', False)],
-        )
-        menu.position = (50, 50)
-        menu.enableEffect('enlarge-font-on-focus', font=None, size=60, enlarge_factor=1.2, enlarge_time=0.3)
-        menu.color = (255,255,255)
-        menu.focus_color = (40, 200, 40)
+# class Menu(object):
+#     """
+#     Creates main menu
+#     """
+#     print("Menu")
+#     running = True
+#     def main(self, screen):
+#         clock = pygame.time.Clock()
+#         menu = kezmenu.KezMenu(
+#             ['Play!', lambda: Game().main(screen)],
+#             ['Quit', lambda: setattr(self, 'running', False)],
+#         )
+#         menu.position = (50, 50)
+#         menu.enableEffect('enlarge-font-on-focus', font=None, size=60, enlarge_factor=1.2, enlarge_time=0.3)
+#         menu.color = (255,255,255)
+#         menu.focus_color = (40, 200, 40)
         
-        nightmare = construct_nightmare(screen.get_size())
-        highscoresurf = self.construct_highscoresurf() #Loads highscore onto menu
+#         nightmare = construct_nightmare(screen.get_size())
+#         highscoresurf = self.construct_highscoresurf() #Loads highscore onto menu
 
-        timepassed = clock.tick(30) / 1000.
+#         timepassed = clock.tick(30) / 1000.
 
-        while self.running:
-            events = pygame.event.get()
+#         while self.running:
+#             events = pygame.event.get()
 
-            for event in events:
-                if event.type == pygame.QUIT:
-                    exit()
+#             for event in events:
+#                 if event.type == pygame.QUIT:
+#                     exit()
 
-            menu.update(events, timepassed)
+#             menu.update(events, timepassed)
 
-            timepassed = clock.tick(30) / 1000.
+#             timepassed = clock.tick(30) / 1000.
 
-            if timepassed > 1: # A game has most likely been played 
-                highscoresurf = self.construct_highscoresurf()
+#             if timepassed > 1: # A game has most likely been played 
+#                 highscoresurf = self.construct_highscoresurf()
 
-            screen.blit(nightmare, (0,0))
-            screen.blit(highscoresurf, highscoresurf.get_rect(right=WIDTH-50, bottom=HEIGHT-50))
-            menu.draw(screen)
-            pygame.display.flip()
+#             screen.blit(nightmare, (0,0))
+#             screen.blit(highscoresurf, highscoresurf.get_rect(right=WIDTH-50, bottom=HEIGHT-50))
+#             menu.draw(screen)
+#             pygame.display.flip()
 
-    def construct_highscoresurf(self):
-        """
-        Loads high score from file
-        """
-        font = pygame.font.Font(None, 50)
-        highscore = load_score()
-        text = "Highscore: {}".format(highscore)
-        return font.render(text, True, (255,255,255))
+#     def construct_highscoresurf(self):
+#         """
+#         Loads high score from file
+#         """
+#         font = pygame.font.Font(None, 50)
+#         highscore = load_score()
+#         text = "Highscore: {}".format(highscore)
+#         return font.render(text, True, (255,255,255))
 
 def construct_nightmare(size):
     """
@@ -599,4 +627,4 @@ if __name__ == '__main__':
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("MaTris")
-    Menu().main(screen)
+    Game().main(screen)
