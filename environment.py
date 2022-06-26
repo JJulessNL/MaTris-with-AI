@@ -112,10 +112,10 @@ class TetrisEnv(Env):
         reward = 0
 
         # Calculating the reward for the action
-        reward += (gamestate['score'] * 100 - self.score)
+        reward += (gamestate['score']- self.score)
 
         # Saving this score also in total_reward
-        self.total_reward["score"] += (gamestate["score"] * 100 - self.score)
+        self.total_reward["score"] += (gamestate["score"] - self.score)
 
         # Saving the current score in self.score, to use it as the old score in the next iteration.
         self.score = gamestate["score"]

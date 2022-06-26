@@ -115,7 +115,7 @@ class Matris(object):
         self.matrix = dict()
         for y in range(MATRIX_HEIGHT):
             for x in range(MATRIX_WIDTH):
-                self.matrix[(y,x)] = None
+                self.matrix[(y,x)] = 0
 
         self.combo = 1 # Combo will increase when you clear lines with several tetrominos in a row
         
@@ -246,10 +246,11 @@ class Matris(object):
                 if with_tetromino[(y,x)] is None:
                     self.surface.fill(BGCOLOR, block_location)
                 else:
-                    if with_tetromino[(y,x)][0] == 'shadow':
-                        self.surface.fill(BGCOLOR, block_location)
-                    
-                    self.surface.blit(with_tetromino[(y,x)][1], block_location)
+                    if with_tetromino[(y,x)] != 0:
+                        if with_tetromino[(y,x)][0] == 'shadow':
+                            self.surface.fill(BGCOLOR, block_location)
+                        
+                        self.surface.blit(with_tetromino[(y,x)][1], block_location)
                     
     def gameover(self, full_exit=False):
         """
