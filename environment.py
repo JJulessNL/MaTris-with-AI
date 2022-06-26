@@ -7,6 +7,8 @@ from pynput.keyboard import Key, Controller
 
 class TetrisEnv(Env):
     def __init__(self):
+        super().__init__()
+
         # Create an actionspace with 6 actions (nothing, rotate, left, right, soft drop, hard drop)
         self.action_space = spaces.Discrete(6)
 
@@ -23,8 +25,10 @@ class TetrisEnv(Env):
         pygame.display.set_caption("MaTris")
         self.game = Game()
         self.game.main(screen)
+        print("GAME INITIALIZED")
 
     def step(self, action: int):
+        print("STEP: " + str(self.step_counter))	
         self._give_input(action)
 
         gamestate = self.game.matris.receive_gamestate()
@@ -33,18 +37,30 @@ class TetrisEnv(Env):
         observation = gamestate['matrix']
         data = list(observation.items())
         observation_array = np.array(data)
-        observation_matrix = np.zeros((MATRIX_HEIGHT, MATRIX_WIDTH))
+        observation_matrix = np.empty((MATRIX_HEIGHT, MATRIX_WIDTH))
         k = 0
 
         for i in range(MATRIX_HEIGHT):
             for j in range(MATRIX_WIDTH):
-                observation_matrix[i][j] = observation_array[k][1]
-                print(observation_array[k][1])
+                if(type(observation_array[k][1]) == tuple):
+                    observation_matrix[i][j] = 1
+                else:
+                    observation_matrix[i][j] = observation_array[k][1]
                 k += 1
         
 
         # Get reward
         reward = self._get_reward(gamestate, action)
+        print(gamestate["isAlive"])
+
+        info = {}
+        timepassed = self.game.clock.tick(50)
+        if self.game.matris.update((timepassed / 1000.) if not self.game.matris.paused else 0):
+            gamestate = self.game.matris.receive_gamestate()
+            if gamestate["isAlive"]:
+                print("Alive: " +  str(gamestate["isAlive"]))
+                self.game.redraw()
+
 
         # Check if the game is over
         if gamestate["isAlive"] == False:
@@ -57,10 +73,6 @@ class TetrisEnv(Env):
             done = True
         else:
             done = False
-
-        info = {}
-
-        self.game.redraw()
 
         # Increase step counter
         self.step_counter += 1
@@ -127,8 +139,9 @@ class TetrisEnv(Env):
 
         return reward 
 
-    def render(self):
-        pass
+    def render(self, mode='human', close=False):
+        return None
+
     def reset(self):
         # Reset total_reward variable (used for logging) to 0
         self.total_reward = {
@@ -146,7 +159,7 @@ class TetrisEnv(Env):
         self.step_counter = 0
 
         # Reset the game
-        self.game.restart()
+        self.game.restartGame()
 
         # Set input to none
         self._give_input(0)
@@ -156,13 +169,15 @@ class TetrisEnv(Env):
         observation = gamestate['matrix']
         data = list(observation.items())
         observation_array = np.array(data)
-
-        observation_matrix = np.zeros((MATRIX_HEIGHT, MATRIX_WIDTH))
+        observation_matrix = np.empty((MATRIX_HEIGHT, MATRIX_WIDTH))
         k = 0
 
         for i in range(MATRIX_HEIGHT):
             for j in range(MATRIX_WIDTH):
-                observation_matrix[i][j] = observation_array[k][1]
+                if(type(observation_array[k][1]) == tuple):
+                    observation_matrix[i][j] = 1
+                else:
+                    observation_matrix[i][j] = observation_array[k][1]
                 k += 1
 
         print(observation_matrix)
